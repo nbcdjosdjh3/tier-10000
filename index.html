@@ -1,0 +1,1547 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover" />
+  <title>Tier List Maker</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b0f19">
+
+  <!-- Cropper.js -->
+  <link rel="stylesheet" href="./cropper.min.css">
+
+  <style>
+    :root{
+      --bg:#0b0f19; --panel:#121a2a; --line:#22304f; --text:#e8eefc; --muted:#9fb0d0;
+      --chip:#0f1730; --danger:#ff5a7a;
+      --shadow: 0 12px 34px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+      background:linear-gradient(180deg,#060912,#0b0f19 30%,#0b0f19);
+      color:var(--text);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    header{
+      position:sticky; top:0; z-index:10;
+      backdrop-filter: blur(10px);
+      background: rgba(11,15,25,.78);
+      border-bottom:1px solid var(--line);
+    }
+    .wrap{max-width:1200px; margin:0 auto; padding:12px 14px}
+    h1{font-size:15px; margin:0 0 10px; letter-spacing:.4px}
+    .bar{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+    button, input{
+      border:1px solid var(--line);
+      background:rgba(18,26,42,.9);
+      color:var(--text);
+      border-radius:12px;
+      padding:10px 12px;
+      font-size:14px;
+    }
+    button{cursor:pointer; user-select:none}
+    button.primary{border-color:#3757ff; background:linear-gradient(180deg,#2231ff,#1a28cc)}
+    button.danger{border-color:#ff3d63; background:linear-gradient(180deg,#3a1420,#2a0f18); color:#ffd2dc}
+    button.ghost{background:transparent}
+    button:disabled{opacity:.6; cursor:not-allowed}
+    .hint{color:var(--muted); font-size:12px; margin-left:auto}
+    main{max-width:1200px; margin:0 auto; padding:12px 14px 28px}
+    .grid{display:grid; grid-template-columns: 1fr; gap:12px}
+    @media(min-width: 980px){ .grid{grid-template-columns: 2.2fr .8fr} }
+
+    .board{
+      border:1px solid var(--line);
+      border-radius:16px;
+      overflow:hidden;
+      background:rgba(18,26,42,.7);
+      box-shadow: var(--shadow);
+    }
+    .row{
+      display:grid;
+      grid-template-columns: 96px 1fr;
+      border-top:1px solid var(--line);
+    }
+    .row:first-child{border-top:none}
+
+    .tier-label{
+      display:flex; align-items:center; justify-content:center;
+      font-weight:800;
+      border-right:1px solid var(--line);
+      user-select:none;
+      position:relative;
+      min-height:96px;
+    }
+    .tier-label textarea{
+      width:70px; text-align:center;
+      font-weight:900; letter-spacing:.8px;
+      border:none; background:transparent;
+      outline:none;
+      color:inherit;
+      resize:none;
+      overflow:hidden;
+      line-height:1.25;
+      font-size:inherit;
+      font-family:inherit;
+      padding:0;
+      display:block;
+    }
+    .tier-label .delTier{
+      position:absolute; right:6px; top:6px;
+      font-size:12px; padding:7px 9px; border-radius:12px
+    }
+    .tier-label .colorTier{
+      position:absolute; left:6px; top:6px;
+      font-size:12px; padding:7px 9px; border-radius:12px
+    }
+
+    .dropzone{
+      min-height:96px;
+      padding:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:flex-start;
+      align-content:flex-start;
+    }
+    .dropzone.over{
+      outline:2px dashed #6aa1ff;
+      outline-offset:-6px;
+      background:rgba(106,161,255,.08);
+    }
+
+    .card{
+      width:80px; height:80px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:var(--chip);
+      overflow:hidden;
+      position:relative;
+      cursor:grab;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      user-select:none;
+      touch-action:none; /* pointerドラッグ用 */
+    }
+    .card:active{cursor:grabbing}
+    .card.dragging{opacity:.35}
+    .card img{
+      width:100%;
+      height:100%;
+      object-fit: cover; /* ここで「正方形に見える」 */
+      display:block;
+      pointer-events:none;
+    }
+    .card .name{
+      position:absolute; left:0; right:0; bottom:0;
+      padding:5px 6px;
+      font-size:11px;
+      background:linear-gradient(180deg,transparent,rgba(0,0,0,.72));
+      text-align:center;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      cursor:pointer;
+    }
+    .card .x{
+      position:absolute; right:5px; top:5px;
+      width:24px; height:24px;
+      border-radius:10px;
+      background:rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.18);
+      color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      font-size:13px;
+      cursor:pointer;
+    }
+
+    .pool{
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:rgba(18,26,42,.7);
+      overflow:hidden;
+      box-shadow: var(--shadow);
+    }
+    .pool header{position:static; backdrop-filter:none; background:transparent; border:none}
+    .pool .wrap{padding:12px 12px 0}
+    .pool h2{font-size:14px; margin:0 0 10px}
+    .pool-body{
+      padding:12px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      min-height:120px;
+      align-content:flex-start;
+    }
+    .pool-body.over{
+      outline:2px dashed #6aa1ff;
+      outline-offset:-6px;
+      background:rgba(106,161,255,.08);
+    }
+
+    .side{display:flex; flex-direction:column; gap:12px}
+    .panel{
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:rgba(18,26,42,.7);
+      padding:12px;
+      box-shadow: var(--shadow);
+    }
+    .panel h3{margin:0 0 10px; font-size:14px}
+    .panel label{display:block; font-size:12px; color:var(--muted); margin:10px 0 6px}
+    .panel input[type="text"]{width:100%}
+    .panel small{color:var(--muted)}
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:16px;
+      transform:translateX(-50%);
+      background:rgba(0,0,0,.72);
+      border:1px solid rgba(255,255,255,.12);
+      color:#fff;
+      padding:10px 12px;
+      border-radius:14px;
+      display:none;
+      z-index:10000;
+    }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size:11px;
+      padding:2px 6px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:rgba(255,255,255,.04)
+    }
+
+    /* Mobile polish */
+    @media (max-width: 480px){
+      .wrap{padding:10px 12px}
+      .tier-label{min-height:104px}
+      .dropzone{min-height:104px}
+      .card{width:86px; height:86px}
+      button, input{padding:10px 12px}
+      .hint{margin-left:0; width:100%}
+    }
+
+    /* Input dialog */
+    .input-dialog-backdrop{
+      position:fixed; inset:0;
+      display:none;
+      z-index:10001;
+      background:rgba(0,0,0,.65);
+      padding:16px;
+      align-items:center;
+      justify-content:center;
+    }
+    .input-dialog-backdrop.open{ display:flex; }
+    .input-dialog{
+      width:100%; max-width:360px;
+      background:#121a2a;
+      border:1px solid #22304f;
+      border-radius:16px;
+      padding:16px;
+      box-shadow: var(--shadow);
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .input-dialog p{ margin:0; font-size:14px; }
+    .input-dialog input{ width:100%; }
+    .input-dialog .row{ display:flex; gap:8px; justify-content:flex-end; }
+
+    /* PNG preview modal */
+    #pngModal img{ max-width:100%; display:block; border-radius:12px; }
+
+    /* Modals */
+    .modal-backdrop{
+      position:fixed; inset:0;
+      display:none;
+      z-index:9999;
+      background:rgba(0,0,0,.65);
+      padding:16px;
+    }
+    .modal{
+      max-width:900px;
+      margin:0 auto;
+      background:#121a2a;
+      border:1px solid #22304f;
+      border-radius:16px;
+      overflow:hidden;
+      box-shadow: var(--shadow);
+    }
+    .modal-head{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 12px;
+      border-bottom:1px solid #22304f;
+    }
+    .modal-title{font-weight:800}
+    .modal-body{padding:12px}
+    /* Crop modal: 画面内に収めてボタンを押せるようにする */
+#cropModal .modal{
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+
+#cropModal .modal-body{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;            /* 中身が長ければここだけスクロール */
+  max-height: calc(100vh - 32px - 52px); /* 52px=ヘッダだいたい */
+}
+
+/* 画像領域は“高さ制限”付きにする */
+#cropModal .crop-stage{
+  flex: 1 1 auto;
+  min-height: 240px;
+  max-height: 60vh;          /* ここがキモ：画像がデカくなりすぎない */
+  overflow: hidden;
+}
+
+/* ボタン列は下に固定（常に見える） */
+#cropModal .crop-actions{
+  position: sticky;
+  bottom: 0;
+  padding-top: 8px;
+  background: #121a2a;       /* モーダル背景色と合わせる */
+  border-top: 1px solid #22304f;
+}
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="wrap">
+    <h1>Tier List Maker（スマホ対応 / クロップ1:1 / 色変更）</h1>
+    <div class="bar">
+      <button class="primary" id="addTierBtn">＋ Tier追加</button>
+      <button id="exportPngBtn">PNG書き出し</button>
+      <button id="saveJsonBtn">JSON保存</button>
+      <input type="file" id="loadJsonFile" accept="application/json" style="display:none" />
+      <button id="loadJsonBtn">JSON読込</button>
+      <button class="danger" id="resetBtn">リセット</button>
+      <span class="hint">操作: 指ドラッグ/マウスドラッグで移動・名前タップで編集・×で削除</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="grid">
+    <section>
+      <div class="board" id="board"></div>
+
+      <div class="pool" style="margin-top:12px">
+        <header>
+          <div class="wrap">
+            <h2>未配置アイテム（ここから移動）</h2>
+          </div>
+        </header>
+        <div class="pool-body" id="pool"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="panel">
+        <h3>アイテム追加（正方形クロップして登録）</h3>
+
+        <label>画像ファイル（推奨）</label>
+        <input type="file" id="imgFile" accept="image/*" />
+
+        <label>表示名</label>
+        <input type="text" id="imgName" placeholder="例: キャラ名 / 装備名" />
+
+        <div style="display:flex; gap:8px; margin-top:10px">
+          <button class="primary" id="addItemBtn">追加（クロップへ）</button>
+          <button id="clearInputsBtn">クリア</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>テンプレ</h3>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button id="presetGameBtn">ゲーム用（S〜D）</button>
+          <button id="presetSimpleBtn">シンプル（S/A/B/C）</button>
+        </div>
+        <label>ヒント</label>
+        <small>
+          Tierの左上🎨で色変更（12色プリセット＋自由）。<br>
+          スマホは指でアイコンをつかんで移動。
+        </small>
+      </div>
+
+      <div class="panel">
+        <h3>セーブ管理</h3>
+        <button class="primary" id="newSaveBtn" style="width:100%">現在の状態を保存</button>
+        <div id="savesList" style="margin-top:10px; display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto;"></div>
+        <div id="savesEmpty" style="color:var(--muted); font-size:12px; margin-top:8px; display:none">まだセーブがありません</div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- Crop Modal -->
+<div id="cropModal" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">正方形に切り取り（1:1固定）</div>
+      <button id="cropCloseBtn" class="danger" style="padding:8px 10px;">閉じる</button>
+    </div>
+    <div class="modal-body">
+<div class="crop-stage" style="background:#0f1730; border:1px solid #22304f; border-radius:14px; overflow:hidden;">
+  <img id="cropImage" alt="crop" style="max-width:100%; display:block;">
+</div>
+      <div class="crop-actions" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:12px">
+        <button id="cropZoomOutBtn">−</button>
+        <button id="cropZoomInBtn">＋</button>
+        <button id="cropRotateBtn">回転</button>
+        <button id="cropResetBtn">リセット</button>
+        <button id="cropApplyBtn" class="primary">この切り取りで追加</button>
+      </div>
+
+      <div style="color:#9fb0d0; font-size:12px; margin-top:10px;">
+        ヒント：ドラッグで位置調整、ホイール/ピンチ（端末による）や＋/−でズーム。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Color Modal -->
+<div id="colorModal" class="modal-backdrop">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head">
+      <div class="modal-title">Tierカラー変更</div>
+      <button id="colorCloseBtn" style="padding:8px 10px;">閉じる</button>
+    </div>
+    <div class="modal-body">
+      <div id="colorPresetGrid" style="display:grid; grid-template-columns:repeat(6,1fr); gap:8px;"></div>
+
+      <label style="font-size:12px; color:#9fb0d0; margin-top:12px; display:block">カスタムカラー</label>
+      <input type="color" id="colorCustom" style="width:100%; height:44px; padding:6px">
+
+      <div style="color:#9fb0d0; font-size:12px; margin-top:10px;">
+        明るい色は自動で黒文字、暗い色は白文字に切り替わります。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Input dialog (prompt()の代替) -->
+<div id="inputDialog" class="input-dialog-backdrop">
+  <div class="input-dialog">
+    <p id="inputDialogMsg"></p>
+    <input type="text" id="inputDialogField" />
+    <div class="row">
+      <button id="inputDialogCancel">キャンセル</button>
+      <button id="inputDialogOk" class="primary">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- PNG preview modal (iOS Safari対応) -->
+<div id="pngModal" class="modal-backdrop">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-head">
+      <div class="modal-title">PNG書き出し完了</div>
+      <button id="pngModalClose" style="padding:8px 10px;">閉じる</button>
+    </div>
+    <div class="modal-body" style="display:flex; flex-direction:column; gap:10px;">
+      <p style="color:var(--muted); font-size:13px; margin:0;">
+        <strong style="color:var(--text)">PCの場合：</strong>自動でダウンロードされます。<br>
+        <strong style="color:var(--text)">iPhoneの場合：</strong>下の画像を長押し→「写真に保存」または「画像を保存」。
+      </p>
+      <img id="pngPreviewImg" src="" alt="tier list" />
+    </div>
+  </div>
+</div>
+
+<!-- Cropper.js -->
+<script src="./cropper.min.js"></script>
+
+<script>
+(() => {
+  // ===== IndexedDB autosave =====
+const DB_NAME = 'tierlist-db';
+const DB_VERSION = 1;
+const STORE = 'kv';
+const KEY = 'state';
+
+function idbOpen(){
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if(!db.objectStoreNames.contains(STORE)){
+        db.createObjectStore(STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbGet(key){
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const st = tx.objectStore(STORE);
+    const req = st.get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+async function idbSet(key, value){
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const st = tx.objectStore(STORE);
+    const req = st.put(value, key);
+    req.onsuccess = () => resolve(true);
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+async function idbDel(key){
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const st = tx.objectStore(STORE);
+    const req = st.delete(key);
+    req.onsuccess = () => resolve(true);
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+const SAVES_KEY = 'saves';
+
+async function loadSaves(){
+  try{ return (await idbGet(SAVES_KEY)) || []; }
+  catch(e){ return []; }
+}
+
+async function persistSaves(saves){
+  await idbSet(SAVES_KEY, saves);
+}
+
+async function saveCurrentState(name){
+  const saves = await loadSaves();
+  saves.unshift({ id: uid(), name, savedAt: Date.now(), tiers: JSON.parse(JSON.stringify(state.tiers)), pool: JSON.parse(JSON.stringify(state.pool)) });
+  await persistSaves(saves);
+  await renderSavesList();
+}
+
+async function loadSaveById(id){
+  const saves = await loadSaves();
+  const s = saves.find(s => s.id === id);
+  if(!s) return;
+  state.tiers = s.tiers;
+  state.pool = s.pool;
+  render();
+}
+
+async function deleteSaveById(id){
+  const saves = await loadSaves();
+  await persistSaves(saves.filter(s => s.id !== id));
+  await renderSavesList();
+}
+
+async function renderSavesList(){
+  const saves = await loadSaves();
+  const list = document.getElementById('savesList');
+  const empty = document.getElementById('savesEmpty');
+  list.innerHTML = '';
+  if(saves.length === 0){ empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  for(const s of saves){
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex; align-items:center; gap:6px; padding:8px 10px; background:var(--chip); border:1px solid var(--line); border-radius:12px;';
+
+    const info = document.createElement('div');
+    info.style.cssText = 'flex:1; min-width:0;';
+    const nameEl = document.createElement('div');
+    nameEl.textContent = s.name;
+    nameEl.style.cssText = 'font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+    const dateEl = document.createElement('div');
+    dateEl.textContent = new Date(s.savedAt).toLocaleString('ja-JP', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    dateEl.style.cssText = 'font-size:11px; color:var(--muted); margin-top:2px;';
+    info.appendChild(nameEl);
+    info.appendChild(dateEl);
+
+    const loadBtn = document.createElement('button');
+    loadBtn.textContent = '読込';
+    loadBtn.style.cssText = 'padding:6px 10px; font-size:12px; flex-shrink:0;';
+    loadBtn.addEventListener('click', async () => {
+      if(!confirm(`「${s.name}」を読み込みます。現在の状態は上書きされます。`)) return;
+      await loadSaveById(s.id);
+      showToast(`「${s.name}」を読み込みました`);
+    });
+
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '×';
+    delBtn.className = 'danger';
+    delBtn.style.cssText = 'padding:6px 9px; font-size:12px; flex-shrink:0;';
+    delBtn.addEventListener('click', async () => {
+      if(!confirm(`「${s.name}」を削除しますか？`)) return;
+      await deleteSaveById(s.id);
+      showToast(`「${s.name}」を削除しました`);
+    });
+
+    row.appendChild(info);
+    row.appendChild(loadBtn);
+    row.appendChild(delBtn);
+    list.appendChild(row);
+  }
+}
+
+let saveTimer = null;
+function scheduleAutoSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    idbSet(KEY, state).catch(e => {
+      console.warn('IndexedDB save failed', e);
+    });
+  }, 300);
+}
+
+async function loadAutoSave(){
+  try{
+    const saved = await idbGet(KEY);
+if(saved && Array.isArray(saved.tiers) && Array.isArray(saved.pool)){
+  state = saved;
+  return true;
+}
+  }catch(e){
+    console.warn('IndexedDB load failed', e);
+  }
+  return false;
+}
+
+  // ===== Custom input dialog =====
+  const inputDialog = document.getElementById('inputDialog');
+  const inputDialogMsg = document.getElementById('inputDialogMsg');
+  const inputDialogField = document.getElementById('inputDialogField');
+  const inputDialogOk = document.getElementById('inputDialogOk');
+  const inputDialogCancel = document.getElementById('inputDialogCancel');
+  let _inputResolve = null;
+
+  function showInputDialog(msg, defaultVal = ''){
+    return new Promise(resolve => {
+      _inputResolve = resolve;
+      inputDialogMsg.textContent = msg;
+      inputDialogField.value = defaultVal;
+      inputDialog.classList.add('open');
+      setTimeout(() => { inputDialogField.focus(); inputDialogField.select(); }, 50);
+    });
+  }
+
+  function closeInputDialog(val){
+    inputDialog.classList.remove('open');
+    if(_inputResolve){ _inputResolve(val); _inputResolve = null; }
+  }
+
+  inputDialogOk.addEventListener('click', () => closeInputDialog(inputDialogField.value));
+  inputDialogCancel.addEventListener('click', () => closeInputDialog(null));
+  inputDialog.addEventListener('click', e => { if(e.target === inputDialog) closeInputDialog(null); });
+  inputDialogField.addEventListener('keydown', e => {
+    if(e.key === 'Enter') closeInputDialog(inputDialogField.value);
+    if(e.key === 'Escape') closeInputDialog(null);
+  });
+
+  // ===== PNG preview modal =====
+  const pngModal = document.getElementById('pngModal');
+  const pngPreviewImg = document.getElementById('pngPreviewImg');
+  document.getElementById('pngModalClose').addEventListener('click', () => {
+    pngModal.style.display = 'none';
+    pngPreviewImg.src = '';
+  });
+  pngModal.addEventListener('click', e => {
+    if(e.target === pngModal){ pngModal.style.display = 'none'; pngPreviewImg.src = ''; }
+  });
+
+  const board = document.getElementById('board');
+  const pool = document.getElementById('pool');
+
+  const addTierBtn = document.getElementById('addTierBtn');
+  const exportPngBtn = document.getElementById('exportPngBtn');
+  const saveJsonBtn = document.getElementById('saveJsonBtn');
+  const loadJsonBtn = document.getElementById('loadJsonBtn');
+  const loadJsonFile = document.getElementById('loadJsonFile');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const imgFile = document.getElementById('imgFile');
+  const imgName = document.getElementById('imgName');
+  const addItemBtn = document.getElementById('addItemBtn');
+  const clearInputsBtn = document.getElementById('clearInputsBtn');
+
+  const presetGameBtn = document.getElementById('presetGameBtn');
+  const presetSimpleBtn = document.getElementById('presetSimpleBtn');
+
+  const toast = document.getElementById('toast');
+
+  // Crop modal
+  const cropModal = document.getElementById('cropModal');
+  const cropImage = document.getElementById('cropImage');
+  const cropCloseBtn = document.getElementById('cropCloseBtn');
+  const cropApplyBtn = document.getElementById('cropApplyBtn');
+  const cropZoomInBtn = document.getElementById('cropZoomInBtn');
+  const cropZoomOutBtn = document.getElementById('cropZoomOutBtn');
+  const cropRotateBtn = document.getElementById('cropRotateBtn');
+  const cropResetBtn = document.getElementById('cropResetBtn');
+
+  // Color modal
+  const colorModal = document.getElementById('colorModal');
+  const colorPresetGrid = document.getElementById('colorPresetGrid');
+  const colorCustom = document.getElementById('colorCustom');
+  const colorCloseBtn = document.getElementById('colorCloseBtn');
+
+  const COLOR_PRESETS = [
+    '#ff4d6d', '#ff7a18', '#ffb703', '#80ed99', '#06d6a0', '#4cc9f0',
+    '#4895ef', '#4361ee', '#7209b7', '#b5179e', '#adb5bd', '#ffffff'
+  ];
+
+let state = { tiers: [], pool: [] };
+
+function makeDefaultState(){
+  return {
+    tiers: [
+      { id: uid(), label: 'S', color: '#ff4d6d', items: [] },
+      { id: uid(), label: 'A', color: '#ffb703', items: [] },
+      { id: uid(), label: 'B', color: '#4cc9f0', items: [] },
+      { id: uid(), label: 'C', color: '#b8c0ff', items: [] },
+    ],
+    pool: []
+  };
+}
+
+// とりあえず初期状態を入れる（あとでIndexedDBが上書きする）
+state = makeDefaultState();
+
+
+  // Desktop drag (HTML DnD)
+  let dragItemId = null;
+
+  // Pointer drag (mobile-friendly)
+  let pointerDrag = {
+    active: false,
+    itemId: null,
+    originEl: null,
+    ghostEl: null,
+    offsetX: 0,
+    offsetY: 0,
+    lastOver: null
+  };
+
+  // === Auto scroll while dragging (mobile) ===
+const AUTO_SCROLL_MARGIN = 80;  // 画面端から何px以内で反応
+const AUTO_SCROLL_SPEED  = 12;  // スクロール速度
+let autoScrollRAF = null;
+let lastDragClientY = 0;
+
+function cancelAutoScroll(){
+  if(autoScrollRAF){
+    cancelAnimationFrame(autoScrollRAF);
+    autoScrollRAF = null;
+  }
+}
+
+function tickAutoScroll(){
+  if(!pointerDrag.active) { cancelAutoScroll(); return; }
+
+  const y = lastDragClientY;
+  const vh = window.innerHeight;
+
+  let delta = 0;
+  if(y < AUTO_SCROLL_MARGIN) delta = -AUTO_SCROLL_SPEED;
+  else if(y > vh - AUTO_SCROLL_MARGIN) delta = AUTO_SCROLL_SPEED;
+
+  if(delta !== 0){
+    window.scrollBy(0, delta);
+    autoScrollRAF = requestAnimationFrame(tickAutoScroll);
+  }else{
+    cancelAutoScroll();
+  }
+}
+
+
+  // Cropper state
+  let cropper = null;
+  let pendingName = '';
+
+  // Color picker state
+  let activeTier = null;
+
+  function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(2,6); }
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.style.display = 'none', 1700);
+  }
+
+  function isLight(hex){
+    const c = (hex || '#000000').replace('#','');
+    const r = parseInt(c.substr(0,2),16);
+    const g = parseInt(c.substr(2,2),16);
+    const b = parseInt(c.substr(4,2),16);
+    return (r*0.299 + g*0.587 + b*0.114) > 180;
+  }
+
+  function fileToDataURL(file){
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  }
+
+  function showDropOver(el){
+    if(pointerDrag.lastOver && pointerDrag.lastOver !== el){
+      pointerDrag.lastOver.classList.remove('over');
+    }
+    pointerDrag.lastOver = el;
+    if(el) el.classList.add('over');
+  }
+
+  function clearDropOver(){
+    if(pointerDrag.lastOver){
+      pointerDrag.lastOver.classList.remove('over');
+      pointerDrag.lastOver = null;
+    }
+  }
+
+  function findDropTarget(clientX, clientY){
+    const el = document.elementFromPoint(clientX, clientY);
+    if(!el) return null;
+
+    // tier zone
+    const zone = el.closest?.('.dropzone');
+    if(zone) return zone;
+
+    // pool
+    const p = el.closest?.('#pool');
+    if(p) return p;
+
+    return null;
+  }
+
+  function getInsertIndex(zone, clientX, clientY){
+  const cards = [...zone.querySelectorAll('.card')];
+  if(cards.length === 0) return 0;
+
+  let closestIndex = cards.length;
+  let closestDist = Infinity;
+
+  cards.forEach((card, i) => {
+    const rect = card.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top  + rect.height / 2;
+    const dx = clientX - cx;
+    const dy = clientY - cy;
+    const dist = dx*dx + dy*dy;
+
+    if(dist < closestDist){
+      closestDist = dist;
+      closestIndex = i;
+    }
+  });
+
+  // 中央より右/下なら「後ろ」に入れる
+  const r = cards[closestIndex]?.getBoundingClientRect();
+  if(r && (clientX > r.left + r.width/2 || clientY > r.top + r.height/2)){
+    closestIndex++;
+  }
+
+  return Math.min(closestIndex, cards.length);
+}
+
+
+  function makeTierRow(tier){
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.dataset.tierId = tier.id;
+
+    const label = document.createElement('div');
+    label.className = 'tier-label';
+
+    label.style.color = isLight(tier.color) ? '#000000' : '#ffffff';
+    label.style.background = tier.color;
+
+    const input = document.createElement('textarea');
+    input.value = tier.label;
+    input.title = 'Tier名を編集';
+    input.maxLength = 10;
+    input.rows = 1;
+    input.addEventListener('input', () => {
+      tier.label = input.value;
+      input.style.height = 'auto';
+      input.style.height = input.scrollHeight + 'px';
+      scheduleAutoSave();
+    });
+
+    const colorBtn = document.createElement('button');
+    colorBtn.className = 'colorTier';
+    colorBtn.textContent = '🎨';
+    colorBtn.title = '色を変更';
+    colorBtn.addEventListener('click', () => openColorPicker(tier));
+
+    const delTier = document.createElement('button');
+    delTier.className = 'delTier danger';
+    delTier.textContent = '×';
+    delTier.title = 'Tier削除（中身は未配置へ）';
+    delTier.addEventListener('click', () => {
+      state.pool.push(...tier.items);
+      state.tiers = state.tiers.filter(t => t.id !== tier.id);
+      render();
+    });
+
+    label.appendChild(colorBtn);
+    label.appendChild(input);
+    label.appendChild(delTier);
+
+    const zone = document.createElement('div');
+    zone.className = 'dropzone';
+    zone.dataset.drop = 'tier';
+    zone.dataset.tierId = tier.id;
+
+    // Desktop HTML DnD
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zone.classList.remove('over');
+      if(!dragItemId) return;
+      moveItemToTier(dragItemId, tier.id);
+    });
+
+    row.appendChild(label);
+    row.appendChild(zone);
+    return row;
+  }
+
+  function makeCard(item){
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.draggable = true; // desktop
+    card.dataset.itemId = item.id;
+
+    const img = document.createElement('img');
+    img.src = item.src;
+    img.alt = item.name || 'item';
+
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = item.name || '';
+    name.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const next = await showInputDialog('表示名を編集', item.name || '');
+      if(next === null) return;
+      item.name = next;
+      render();
+    });
+
+    const x = document.createElement('div');
+    x.className = 'x';
+    x.textContent = '×';
+    x.title = '削除';
+    x.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeItem(item.id);
+    });
+
+    // Desktop HTML DnD
+    card.addEventListener('dragstart', () => {
+      dragItemId = item.id;
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend', () => {
+      dragItemId = null;
+      card.classList.remove('dragging');
+    });
+
+    // Pointer drag (mobile + desktop)
+    card.addEventListener('pointerdown', (e) => {
+      // When tapping delete or name, don't start drag
+      const target = e.target;
+      if(target.closest('.x') || target.closest('.name')) return;
+
+      // left button only on mouse
+      if(e.pointerType === 'mouse' && e.button !== 0) return;
+
+      e.preventDefault();
+      startPointerDrag(e, card, item.id);
+    });
+
+    card.appendChild(img);
+    card.appendChild(name);
+    card.appendChild(x);
+    return card;
+  }
+
+  function startPointerDrag(e, cardEl, itemId){
+    pointerDrag.active = true;
+    pointerDrag.itemId = itemId;
+    pointerDrag.originEl = cardEl;
+
+    const rect = cardEl.getBoundingClientRect();
+    pointerDrag.offsetX = e.clientX - rect.left;
+    pointerDrag.offsetY = e.clientY - rect.top;
+
+    // ghost
+    const ghost = cardEl.cloneNode(true);
+    ghost.style.position = 'fixed';
+    ghost.style.left = (e.clientX - pointerDrag.offsetX) + 'px';
+    ghost.style.top  = (e.clientY - pointerDrag.offsetY) + 'px';
+    ghost.style.zIndex = '20000';
+    ghost.style.transform = 'scale(1.05)';
+    ghost.style.boxShadow = '0 18px 40px rgba(0,0,0,.45)';
+    ghost.style.cursor = 'grabbing';
+    ghost.style.pointerEvents = 'none';
+    document.body.appendChild(ghost);
+    pointerDrag.ghostEl = ghost;
+
+    // dim original
+    cardEl.classList.add('dragging');
+
+    // capture
+    cardEl.setPointerCapture?.(e.pointerId);
+
+    window.addEventListener('pointermove', onPointerMove, {passive:false});
+    window.addEventListener('pointerup', onPointerUp, {passive:false});
+    window.addEventListener('pointercancel', onPointerUp, {passive:false});
+  }
+
+function onPointerMove(e){
+  if(!pointerDrag.active) return;
+  e.preventDefault();
+
+  if(pointerDrag.ghostEl){
+    pointerDrag.ghostEl.style.left = (e.clientX - pointerDrag.offsetX) + 'px';
+    pointerDrag.ghostEl.style.top  = (e.clientY - pointerDrag.offsetY) + 'px';
+  }
+
+  const target = findDropTarget(e.clientX, e.clientY);
+  showDropOver(target);
+
+  // ★追加
+  lastDragClientY = e.clientY;
+  if(!autoScrollRAF) autoScrollRAF = requestAnimationFrame(tickAutoScroll);
+}
+
+
+  function onPointerUp(e){
+    if(!pointerDrag.active) return;
+    e.preventDefault();
+
+    const target = findDropTarget(e.clientX, e.clientY);
+
+    // cleanup visuals
+    if(pointerDrag.originEl) pointerDrag.originEl.classList.remove('dragging');
+    if(pointerDrag.ghostEl) pointerDrag.ghostEl.remove();
+    clearDropOver();
+
+    // apply move
+if(target){
+  if(target.id === 'pool'){
+    moveItemToPool(pointerDrag.itemId);
+  }else if(target.classList.contains('dropzone')){
+    const tierId = target.dataset.tierId;
+
+    // ★ ここが追加：並び替え位置を計算
+    const insertIndex = getInsertIndex(
+      target,
+      e.clientX,
+      e.clientY
+    );
+
+    moveItemToTierAt(pointerDrag.itemId, tierId, insertIndex);
+  }
+}
+
+
+    pointerDrag.active = false;
+    pointerDrag.itemId = null;
+    pointerDrag.originEl = null;
+    pointerDrag.ghostEl = null;
+
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+
+    cancelAutoScroll();
+
+  }
+
+  function removeItem(itemId){
+    for(const t of state.tiers) t.items = t.items.filter(it => it.id !== itemId);
+    state.pool = state.pool.filter(it => it.id !== itemId);
+    render();
+  }
+
+  function findAndDetach(itemId){
+    for(const t of state.tiers){
+      const idx = t.items.findIndex(it => it.id === itemId);
+      if(idx >= 0) return t.items.splice(idx,1)[0];
+    }
+    const pidx = state.pool.findIndex(it => it.id === itemId);
+    if(pidx >= 0) return state.pool.splice(pidx,1)[0];
+    return null;
+  }
+
+  function moveItemToTier(itemId, tierId){
+    const item = findAndDetach(itemId);
+    if(!item) return;
+    const tier = state.tiers.find(t => t.id === tierId);
+    if(!tier) return;
+    tier.items.push(item);
+    render();
+  }
+
+  function moveItemToTierAt(itemId, tierId, index){
+  const item = findAndDetach(itemId);
+  if(!item) return;
+
+  const tier = state.tiers.find(t => t.id === tierId);
+  if(!tier) return;
+
+  tier.items.splice(index, 0, item);
+  render();
+}
+
+
+  function moveItemToPool(itemId){
+    const item = findAndDetach(itemId);
+    if(!item) return;
+    state.pool.push(item);
+    render();
+  }
+
+  function render(){
+    board.innerHTML = '';
+    state.tiers.forEach(t => board.appendChild(makeTierRow(t)));
+    board.querySelectorAll('.tier-label textarea').forEach(ta => {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    });
+
+    state.tiers.forEach(t => {
+      const zone = board.querySelector(`.dropzone[data-tier-id="${t.id}"]`);
+      t.items.forEach(it => zone.appendChild(makeCard(it)));
+    });
+
+    pool.innerHTML = '';
+    state.pool.forEach(it => pool.appendChild(makeCard(it)));
+
+    // Desktop DnD for pool
+    pool.ondragover = (e) => { e.preventDefault(); pool.classList.add('over'); };
+    pool.ondragleave = () => pool.classList.remove('over');
+    pool.ondrop = (e) => {
+      e.preventDefault();
+      pool.classList.remove('over');
+      if(!dragItemId) return;
+      moveItemToPool(dragItemId);
+    };
+    scheduleAutoSave();
+  }
+
+  function addTier(label='New', color=randomColor()){
+    state.tiers.push({ id: uid(), label, color, items: [] });
+    render();
+  }
+
+  function randomColor(){
+    return COLOR_PRESETS[Math.floor(Math.random()*COLOR_PRESETS.length)];
+  }
+
+  function addItem(src, name){
+    const item = { id: uid(), src, name: name || '' };
+    state.pool.push(item);
+    render();
+  }
+
+  // ---------- Crop modal ----------
+  function openCropModal(src, name){
+    pendingName = name || '';
+    cropModal.style.display = 'block';
+    cropImage.src = src;
+
+    cropImage.onload = () => {
+      if(cropper) cropper.destroy();
+      cropper = new Cropper(cropImage, {
+        aspectRatio: 1,
+        viewMode: 1,
+        autoCropArea: 1,
+        background: false,
+        movable: true,
+        zoomable: true,
+        rotatable: true,
+        responsive: true,
+      });
+    };
+  }
+
+  function closeCropModal(){
+    cropModal.style.display = 'none';
+    if(cropper){ cropper.destroy(); cropper = null; }
+    cropImage.src = '';
+    pendingName = '';
+  }
+
+  cropCloseBtn.addEventListener('click', closeCropModal);
+  cropModal.addEventListener('click', (e) => { if(e.target === cropModal) closeCropModal(); });
+
+  cropZoomInBtn.addEventListener('click', () => cropper && cropper.zoom(0.1));
+  cropZoomOutBtn.addEventListener('click', () => cropper && cropper.zoom(-0.1));
+  cropRotateBtn.addEventListener('click', () => cropper && cropper.rotate(90));
+  cropResetBtn.addEventListener('click', () => cropper && cropper.reset());
+
+  cropApplyBtn.addEventListener('click', () => {
+    if(!cropper) return;
+    const canvas = cropper.getCroppedCanvas({
+      width: 512, height: 512,
+      imageSmoothingEnabled: true,
+      imageSmoothingQuality: 'high'
+    });
+    const dataUrl = canvas.toDataURL('image/png');
+    addItem(dataUrl, pendingName);
+    closeCropModal();
+    showToast('正方形に切り取って追加しました');
+  });
+
+  // ---------- Color modal ----------
+  function openColorPicker(tier){
+    activeTier = tier;
+    colorPresetGrid.innerHTML = '';
+    COLOR_PRESETS.forEach(c => {
+      const b = document.createElement('button');
+      b.style.background = c;
+      b.style.height = '40px';
+      b.style.borderRadius = '12px';
+      b.style.border = '1px solid #22304f';
+      b.style.padding = '0';
+      b.title = c;
+      b.addEventListener('click', () => {
+        tier.color = c;
+        closeColorPicker();
+        render();
+      });
+      colorPresetGrid.appendChild(b);
+    });
+
+    colorCustom.value = tier.color || '#ffffff';
+    colorModal.style.display = 'block';
+  }
+
+  function closeColorPicker(){
+    colorModal.style.display = 'none';
+    activeTier = null;
+  }
+
+  colorCustom.addEventListener('input', () => {
+    if(activeTier){
+      activeTier.color = colorCustom.value;
+      render();
+    }
+  });
+
+  colorCloseBtn.addEventListener('click', closeColorPicker);
+  colorModal.addEventListener('click', (e) => { if(e.target === colorModal) closeColorPicker(); });
+
+  // ---------- PNG export (Canvas) ----------
+  async function exportPNG(){
+    const canvas = document.createElement('canvas');
+    const scale = 2;
+    const width = board.clientWidth;
+
+    const labelW = 96;
+const size = 80;
+const gap = 10;
+const pad = 10;      // dropzoneのpaddingと合わせる
+const minRowH = 96;
+
+const usableW = width - labelW - pad*2;
+const perRow = Math.max(1, Math.floor((usableW + gap) / (size + gap)));
+
+function calcRowH(itemCount){
+  const rows = Math.max(1, Math.ceil(itemCount / perRow));
+  return Math.max(minRowH, pad*2 + rows*size + (rows-1)*gap);
+}
+
+
+let height = 0;
+for(const t of state.tiers){
+  height += calcRowH(t.items.length);
+}
+height += 2;
+
+
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    // background
+    ctx.fillStyle = '#0b0f19';
+    ctx.fillRect(0,0,width,height);
+
+    const line = '#22304f';
+    const panel = '#121a2a';
+
+    let y = 0;
+    for(const tier of state.tiers){
+const rowH = calcRowH(tier.items.length);
+
+
+      ctx.fillStyle = panel;
+      ctx.fillRect(0,y,width,rowH);
+
+      ctx.strokeStyle = line;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0,y,width,rowH);
+
+      ctx.beginPath();
+      ctx.moveTo(labelW, y);
+      ctx.lineTo(labelW, y+rowH);
+      ctx.stroke();
+
+      // label
+      ctx.fillStyle = tier.color || '#ffffff';
+      ctx.fillRect(0,y,labelW,rowH);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 24px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tier.label || '', labelW/2, y + rowH/2);
+
+
+      // items
+      const items = tier.items;
+      let x = labelW + 10;
+      let iy = y + 10;
+      const size = 80;
+      const gap = 10;
+
+      for(const item of items){
+        if(x + size > width - 10){
+          x = labelW + 10;
+          iy += size + gap;
+        }
+
+        // card bg
+        ctx.fillStyle = '#0f1730';
+        roundRect(ctx, x, iy, size, size, 16, true, false);
+
+        try{
+          const img = await loadImage(item.src);
+          const r = cover(img.width, img.height, size, size);
+          ctx.save();
+          roundRect(ctx, x, iy, size, size, 16, false, true);
+          ctx.drawImage(img, x + r.x, iy + r.y, r.w, r.h);
+          ctx.restore();
+        }catch(e){
+          // ignore load failure
+        }
+
+        if(item.name){
+          ctx.fillStyle = 'rgba(0,0,0,.60)';
+          roundRect(ctx, x, iy + size - 22, size, 22, 12, true, false);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '12px system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(truncate(item.name, 10), x + size/2, iy + size - 11);
+        }
+
+        ctx.strokeStyle = line;
+        roundRect(ctx, x, iy, size, size, 16, false, false);
+
+        x += size + gap;
+      }
+
+      y += rowH;
+    }
+
+    const dataUrl = canvas.toDataURL('image/png');
+
+    // PC: ダウンロード試行
+    try {
+      const a = document.createElement('a');
+      a.download = 'tier-list.png';
+      a.href = dataUrl;
+      a.click();
+    } catch(e) {}
+
+    // iOS含む全環境: モーダルに画像表示（長押し保存）
+    pngPreviewImg.src = dataUrl;
+    pngModal.style.display = 'block';
+    showToast('PNGを書き出しました');
+  }
+
+  function truncate(s, n){
+    if((s || '').length <= n) return s || '';
+    return s.slice(0, n-1) + '…';
+  }
+
+  function loadImage(src){
+    return new Promise((res, rej) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => res(img);
+      img.onerror = rej;
+      img.src = src;
+    });
+  }
+
+  function cover(sw, sh, dw, dh){
+    const r = Math.max(dw/sw, dh/sh);
+    const w = sw*r, h = sh*r;
+    return { w, h, x: (dw-w)/2, y: (dh-h)/2 };
+  }
+
+  function roundRect(ctx, x, y, w, h, r, fill, clip){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+    if(clip) ctx.clip();
+    if(fill) ctx.fill();
+    else ctx.stroke();
+  }
+
+  // ---------- JSON ----------
+  function saveJSON(){
+    const data = JSON.stringify(state, null, 2);
+    const blob = new Blob([data], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tier-list.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('JSONを保存しました');
+  }
+
+  function loadJSONText(text){
+    try{
+      const obj = JSON.parse(text);
+      if(!obj || !Array.isArray(obj.tiers) || !Array.isArray(obj.pool)) throw new Error('format');
+      state.tiers = obj.tiers;
+      state.pool = obj.pool;
+      render();
+      showToast('JSONを読み込みました');
+    }catch(e){
+      alert('JSONの形式が正しくありません');
+    }
+  }
+
+  // ---------- Events ----------
+  addTierBtn.addEventListener('click', () => addTier('New'));
+  exportPngBtn.addEventListener('click', async () => {
+    try{ await exportPNG(); }
+    catch(e){
+      alert('PNG書き出しに失敗しました。URL画像（CORS）だと失敗することがあります。ファイル追加を試してください。');
+    }
+  });
+
+  saveJsonBtn.addEventListener('click', saveJSON);
+
+  loadJsonBtn.addEventListener('click', () => loadJsonFile.click());
+  loadJsonFile.addEventListener('change', async () => {
+    const f = loadJsonFile.files?.[0];
+    if(!f) return;
+    const text = await f.text();
+    loadJSONText(text);
+    loadJsonFile.value = '';
+  });
+
+  resetBtn.addEventListener('click', () => {
+    if(!confirm('リセットします。よろしいですか？')) return;
+state = makeDefaultState();
+idbDel(KEY);
+render();
+
+  });
+
+  clearInputsBtn.addEventListener('click', () => {
+    imgFile.value = '';
+    imgName.value = '';
+  });
+
+addItemBtn.addEventListener('click', async () => {
+  const name = imgName.value.trim();
+
+  if(imgFile.files && imgFile.files[0]){
+    const src = await fileToDataURL(imgFile.files[0]);
+    openCropModal(src, name);
+    imgFile.value = '';
+    return;
+  }
+
+  alert('画像ファイルを指定してください');
+});
+
+
+  function flushTiersToPool(){
+    for(const t of state.tiers) state.pool.push(...t.items);
+  }
+
+  presetGameBtn.addEventListener('click', () => {
+    flushTiersToPool();
+    state.tiers = [
+      { id: uid(), label: 'S', color: '#ff4d6d', items: [] },
+      { id: uid(), label: 'A', color: '#ffb703', items: [] },
+      { id: uid(), label: 'B', color: '#4cc9f0', items: [] },
+      { id: uid(), label: 'C', color: '#b8c0ff', items: [] },
+      { id: uid(), label: 'D', color: '#80ed99', items: [] },
+    ];
+    render();
+  });
+
+  presetSimpleBtn.addEventListener('click', () => {
+    flushTiersToPool();
+    state.tiers = [
+      { id: uid(), label: 'S', color: '#ff4d6d', items: [] },
+      { id: uid(), label: 'A', color: '#ffb703', items: [] },
+      { id: uid(), label: 'B', color: '#4cc9f0', items: [] },
+      { id: uid(), label: 'C', color: '#b8c0ff', items: [] },
+    ];
+    render();
+  });
+
+  // Desktop: Delete key removes current HTML-dnd item (optional)
+  window.addEventListener('keydown', (e) => {
+    if(e.key === 'Delete' && dragItemId){
+      removeItem(dragItemId);
+      dragItemId = null;
+    }
+  });
+
+document.getElementById('newSaveBtn').addEventListener('click', async () => {
+  const name = await showInputDialog('セーブ名を入力してください', `セーブ ${new Date().toLocaleString('ja-JP', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}`);
+  if(name === null) return;
+  await saveCurrentState(name.trim() || '名前なし');
+  showToast(`「${name.trim() || '名前なし'}」を保存しました`);
+});
+
+loadAutoSave().then(() => { render(); renderSavesList(); });
+})();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./service-worker.js');
+  }
+
+</script>
+</body>
+</html>
